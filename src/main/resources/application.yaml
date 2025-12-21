@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: chessbot
+  datasource:
+    url: jdbc:postgresql://localhost:5432/masqueradeBot
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        show_sql: true
+    open-in-view: false
+  mvc:
+    hiddenmethod:
+      filter:
+        enabled: true
+
+
+telegram:
+  bot:
+    username: "@LichessDIO_bot"
+    token: "7948481917:AAF58IJYX1QLWaON5Lv0jibvV4XoAqI5e60"
+
+# Настройки Chess API
+chess:
+  api:
+    base-url: http://localhost:8081/api  # URL нашего Chess API
+    timeout: 5000  # 5 секунд таймаут
+
+
+logging:
+  file:
+    name: logs/chess-bot.log
+  level:
+    com.example.lichess: DEBUG
+    org.telegram: WARN
+    org.springframework.web: INFO
+    org.springframework.web.client: DEBUG
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{HH:mm:ss} %-5level - %msg%n"
+
