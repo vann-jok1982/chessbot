@@ -26,6 +26,9 @@ jobs:
             # Переходим в директорию Telegram Bot
             cd /opt/telegram-chess-bot
             
+            git pull origin main
+            mvn clean package -DskipTests
+            
             # Собираем проект (если нужно)
             # mvn clean package -DskipTests
             
