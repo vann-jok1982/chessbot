@@ -1,168 +1,101 @@
-name: CD - Deploy Telegram Bot to Server
+name: CD Pipeline - Telegram Bot
 
+# ВНИМАНИЕ! Используем ТОЧНО ТАК ЖЕ как в первом приложении!
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'telegram-bot/**'
-    # Только когда есть изменения в коде приложения
-  workflow_dispatch:  # Ручной запуск
-
-# Защита от одновременного деплоя
-concurrency:
-  group: deploy-telegram-bot
-  cancel-in-progress: false
+  workflow_run:
+    workflows: ["CI Pipeline - Telegram Bot"]  # ← Имя CI workflow!
+    branches: [main]
+    types:
+      - completed
 
 jobs:
   deploy:
+    # ТОЛЬКО если CI успешно завершился!
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: 📦 Download Build Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: telegram-bot-jar
-          path: telegram-bot/target/
-
-      - name: 🚀 Deploy to Production Server
+      - name: 🚀 Deploy to Server
         uses: appleboy/ssh-action@v0.1.5
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
+          port: 22
           script: |
             echo "=========================================="
             echo "🚀 ДЕПЛОЙ TELEGRAM CHESS BOT"
-            echo "Сервер: ${{ secrets.SERVER_HOST }}"
-            echo "Ветка: ${{ github.ref }}"
-            echo "Коммит: ${{ github.sha }}"
+            echo "Сервер: 45.144.67.232"
+            echo "Порт: 8081"
             echo "=========================================="
             
-            # 1. Переходим в рабочую директорию
-            cd /opt
+            # 1. Переходим в директорию
+            cd /opt/telegram-chess-bot
             
-            # 2. Создаем/очищаем папку для бота
-            echo "📁 Подготовка директории..."
-            rm -rf telegram-chess-bot-deploy
-            mkdir -p telegram-chess-bot-deploy
-            cd telegram-chess-bot-deploy
-            
-            # 3. Копируем нужные файлы
-            echo "📋 Копирование файлов конфигурации..."
-            
-            # 3.1. Копируем JAR
-            # (В реальности он будет скачан из артефактов)
-            # Пока создаем пустой, потом заменим
-            
-            # 3.2. Создаем Dockerfile
-            cat > Dockerfile << 'EOF'
-            FROM eclipse-temurin:17-jre-alpine
-            WORKDIR /app
-            COPY app.jar app.jar
-            EXPOSE 8081
-            ENTRYPOINT ["java", "-jar", "app.jar", "--server.port=8081"]
-            EOF
-            
-            # 3.3. Создаем docker-compose
-            cat > docker-compose.yml << 'EOF'
-            version: '3.8'
-            services:
-              telegram-bot:
-                build: .
-                container_name: telegram-chess-bot
-                restart: unless-stopped
-                ports:
-                  - "8081:8081"
-                environment:
-                  - TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
-                  - TELEGRAM_BOT_USERNAME=${{ secrets.TELEGRAM_BOT_USERNAME }}
-                  - CHESS_API_URL=http://45.144.67.232:8080/api/games
-                networks:
-                  - bot-network
-            
-              postgres:
-                image: postgres:16-alpine
-                container_name: telegram-bot-postgres
-                restart: unless-stopped
-                environment:
-                  POSTGRES_DB: chessbot_db
-                  POSTGRES_USER: postgres
-                  POSTGRES_PASSWORD: postgres
-                ports:
-                  - "5433:5432"
-                volumes:
-                  - postgres-data:/var/lib/postgresql/data
-                networks:
-                  - bot-network
-            
-            networks:
-              bot-network:
-                driver: bridge
-            
-            volumes:
-              postgres-data:
-            EOF
-            
-            # 3.4. Создаем файл с переменными окружения
-            echo "🔐 Настройка переменных окружения..."
-            cat > .env << EOF
-            TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
-            TELEGRAM_BOT_USERNAME=${{ secrets.TELEGRAM_BOT_USERNAME }}
-            EOF
-            
-            # 4. Останавливаем старые контейнеры
+            # 2. Останавливаем старые контейнеры
             echo "🛑 Остановка старых контейнеров..."
             docker stop telegram-chess-bot 2>/dev/null || true
             docker rm telegram-chess-bot 2>/dev/null || true
             docker stop telegram-bot-postgres 2>/dev/null || true
             docker rm telegram-bot-postgres 2>/dev/null || true
             
-            # 5. Удаляем старые образы
-            echo "🧹 Очистка старых образов..."
+            # 3. Удаляем старые образы
             docker rmi telegram-chess-bot:latest 2>/dev/null || true
             
-            # 6. Запускаем docker-compose
-            echo "🐳 Запуск Docker Compose..."
-            docker-compose down 2>/dev/null || true
-            docker-compose up -d --build
+            # 4. Скачиваем/обновляем код (если используем git)
+            # git pull origin main  # если нужно
             
-            # 7. Ждем запуска
-            echo "⏳ Ожидание запуска приложения..."
-            sleep 15
+            # 5. Собираем JAR (если нужно собирать на сервере)
+            # mvn clean package -DskipTests  # если нужно
             
-            # 8. Проверяем статус
-            echo "✅ Проверка работы приложения..."
-            echo ""
+            # 6. Создаем Dockerfile
+            cat > Dockerfile << 'EOF'
+            FROM eclipse-temurin:17-jre
+            WORKDIR /app
+            COPY target/*.jar app.jar
+            EXPOSE 8081
+            ENTRYPOINT ["java", "-jar", "app.jar", "--server.port=8081", "--server.address=0.0.0.0"]
+            EOF
+            
+            # 7. Запускаем PostgreSQL если не запущен
+            if ! docker ps --format "{{.Names}}" | grep -q "telegram-bot-postgres"; then
+              echo "🐘 Запуск PostgreSQL..."
+              docker run -d \
+                --name telegram-bot-postgres \
+                -e POSTGRES_DB=chessbot_db \
+                -e POSTGRES_USER=postgres \
+                -e POSTGRES_PASSWORD=postgres \
+                -p 5433:5432 \
+                --restart unless-stopped \
+                postgres:16-alpine
+              sleep 10
+            fi
+            
+            # 8. Собираем и запускаем бота
+            echo "🤖 Сборка и запуск Telegram Bot..."
+            docker build -t telegram-chess-bot:latest .
+            
+            docker run -d \
+              --name telegram-chess-bot \
+              --restart unless-stopped \
+              -p 8081:8081 \
+              -e TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}" \
+              -e TELEGRAM_BOT_USERNAME="${{ secrets.TELEGRAM_BOT_USERNAME }}" \
+              telegram-chess-bot:latest
+            
+            # 9. Проверяем
+            echo "✅ Проверка запуска..."
+            sleep 5
+            
             echo "=== СТАТУС КОНТЕЙНЕРОВ ==="
             docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
             
             echo ""
-            echo "=== ПРОВЕРКА ПОРТОВ ==="
-            ss -tulpn | grep -E '8081|5433' || echo "Порты не найдены"
+            echo "=== ДОСТУПНЫЕ ПРИЛОЖЕНИЯ ==="
+            echo "🎮 Chess API: http://45.144.67.232:8080"
+            echo "🤖 Telegram Bot: http://45.144.67.232:8081"
+            echo "💾 PostgreSQL для бота: порт 5433"
             
-            echo ""
-            echo "=== ПРОВЕРКА ЗДОРОВЬЯ ==="
-            if curl -s http://localhost:8081/actuator/health > /dev/null; then
-              echo "✅ Приложение запущено и работает!"
-            else
-              echo "⚠️ Приложение не отвечает на health check"
-              echo "Проверяем логи..."
-              docker logs telegram-chess-bot --tail 20
-            fi
-            
-            echo ""
-            echo "=== ДОСТУП К ПРИЛОЖЕНИЯМ ==="
-            echo "🔹 Chess API: http://45.144.67.232:8080"
-            echo "🔹 Telegram Bot API: http://45.144.67.232:8081"
-            echo "🔹 PostgreSQL для бота: 45.144.67.232:5433"
-            
-            echo ""
             echo "=========================================="
-            echo "🎉 ДЕПЛОЙ ЗАВЕРШЕН УСПЕШНО!"
+            echo "🎉 TELEGRAM BOT УСПЕШНО ЗАПУЩЕН!"
             echo "=========================================="
