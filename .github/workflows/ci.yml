@@ -27,4 +27,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: telegram-bot-jar
-          path: telegram-bot/target/*.jar
+          path: target/*.jar
