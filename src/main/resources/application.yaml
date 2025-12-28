@@ -2,7 +2,7 @@ spring:
   application:
     name: chessbot
   datasource:
-    url: jdbc:postgresql://localhost:5432/masqueradeBot
+    url: jdbc:postgresql://localhost:5432/chessBot
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver

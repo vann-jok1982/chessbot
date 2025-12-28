@@ -45,8 +45,8 @@ jobs:
               --name telegram-chess-bot \
               --network host \
               telegram-chess-bot:latest \
-#              --server.port=8081 \
-#              --server.address=0.0.0.0 \
+              --server.port=8081 \
+              --server.address=0.0.0.0 \
               --telegram.bot.token="${{ secrets.TELEGRAM_BOT_TOKEN }}" \
               --telegram.bot.username="${{ secrets.TELEGRAM_BOT_USERNAME }}" \
               --spring.datasource.url=jdbc:postgresql://localhost:5433/chessbot_db \
