@@ -20,7 +20,7 @@ public class BotFasade {
     private final KeyboardService keyboardService;
 
     /**
-     * 🎯 ГЛАВНЫЙ МЕТОД ОБРАБОТКИ ОБНОВЛЕНИЙ.
+     * 🎯 ГЛАВНЫЙ МЕТОД ОБРАБОТКИ ОБНОВЛЕНИЙ..
      */
     public SendMessage obrabotkaHandleUpdate(Update update) {
         log.info("📨 Обработка обновления: {}", update.getUpdateId());
