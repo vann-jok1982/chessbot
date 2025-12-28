@@ -19,9 +19,10 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: maven
 
       - name: Build and Package
-        run: mvn clean package -DskipTests  # ← ВАЖНО: -DskipTests пропускает тесты!
+        run: mvn clean package -DskipTests
 
       - name: Upload JAR
         uses: actions/upload-artifact@v4
