@@ -3,6 +3,7 @@ package com.chessbot.handlers;
 import com.chessbot.dto.GameResponse;
 import com.chessbot.service.ApiClient;
 import com.chessbot.service.GameSessionManager;
+import com.chessbot.service.TelegramNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -20,13 +21,14 @@ public class ChessCommandHandler {
 
     private final ApiClient apiClient;
     private final GameSessionManager sessionManager;
-
+    private final TelegramNotificationService notificationService;
     /**
      * 🎯 ГЛАВНЫЙ МЕТОД ОБРАБОТКИ КОМАНД
      */
     public String handleCommand(long chatId, String text, String userName) {
         log.info("Обработка команды: chatId={}, text='{}', user='{}'", chatId, text, userName);
 
+        String textJoinGame=text;
         // Очищаем команду от лишних пробелов
         text = text.trim().toLowerCase();
 
@@ -40,9 +42,9 @@ public class ChessCommandHandler {
         } else if (text.startsWith("/listgames")) {
             return handleListGames();
         } else if (text.startsWith("/joingame")) {
-            return handleJoinGame(chatId, text, userName);
+            return handleJoinGame(chatId, textJoinGame, userName);
         } else if (text.startsWith("/move")) {
-            return handleMove(chatId, text, userName);
+            return handleMove(chatId, textJoinGame, userName);
         } else if (text.startsWith("/board")) {
             return handleBoard(chatId);
         } else if (text.startsWith("/status")) {
@@ -348,7 +350,8 @@ public class ChessCommandHandler {
                     sessionManager.getSession(chatId).getPlayerColor(),
                     response.getStatus()
             );
-
+            // 9. ⭐ ОТПРАВЛЯЕМ УВЕДОМЛЕНИЕ СОПЕРНИКУ
+            sendMoveNotificationToOpponent(chatId, response, notation, userName);
             // Формируем ответ
             return formatMoveResponse(response, notation);
 
@@ -358,6 +361,78 @@ public class ChessCommandHandler {
         }
     }
 
+    /**
+     * ⭐ Отправляет уведомление сопернику о сделанном ходе
+     */
+    private void sendMoveNotificationToOpponent(Long playerChatId, GameResponse response,
+                                                String moveNotation, String playerName) {
+        try {
+            // 1. Находим chatId соперника
+            Long opponentChatId = findOpponentChatId(playerChatId, response);
+
+            if (opponentChatId == null) {
+                log.warn("⚠️ Не найден chatId соперника для игры {}", response.getGameId());
+                return;
+            }
+
+            log.info("📤 Отправка уведомления: playerChatId={} → opponentChatId={}, gameId={}",
+                    playerChatId, opponentChatId, response.getGameId());
+
+            // 2. Отправляем уведомление через сервис
+            notificationService.sendMoveNotification(
+                    opponentChatId,
+                    response,
+                    moveNotation
+            );
+
+            log.info("✅ Уведомление отправлено успешно");
+
+        } catch (Exception e) {
+            log.error("❌ Ошибка отправки уведомления сопернику: {}", e.getMessage());
+            // НЕ ПРЕРЫВАЕМ ОСНОВНОЙ ПОТОК - игрок уже получил ответ о своем ходе
+            // Уведомление - это дополнительная функция
+        }
+    }
+
+    /**
+     * Находит chatId соперника по ответу API
+     */
+    private Long findOpponentChatId(Long playerChatId, GameResponse response) {
+        try {
+            // playerChatId одновременно является и userId в вашей системе
+
+            GameResponse.PlayerInfo white = response.getWhitePlayer();
+            GameResponse.PlayerInfo black = response.getBlackPlayer();
+
+            // Проверяем, что информация об игроках есть
+            if (white == null || black == null) {
+                log.warn("Неполная информация об игроках в ответе API");
+                return null;
+            }
+
+            Long whiteId = white.getId() != null ? Long.parseLong(white.getId().toString()) : null;
+            Long blackId = black.getId() != null ? Long.parseLong(black.getId().toString()) : null;
+
+            // Если игрок - белые, то соперник - черные
+            if (whiteId != null && whiteId.equals(playerChatId)) {
+                return blackId;
+            }
+
+            // Если игрок - черные, то соперник - белые
+            if (blackId != null && blackId.equals(playerChatId)) {
+                return whiteId;
+            }
+
+            log.warn("Игрок {} не найден среди участников игры {}",
+                    playerChatId, response.getGameId());
+
+            return null;
+
+        } catch (Exception e) {
+            log.error("Ошибка поиска соперника: {}", e.getMessage());
+            return null;
+        }
+    }
     /**
      * 📊 КОМАНДА /BOARD
      */
