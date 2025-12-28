@@ -19,17 +19,12 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: maven
 
       - name: Build and Package
-        run: mvn clean package -DskipTests
+        run: mvn clean package -DskipTests  # ← ВАЖНО: -DskipTests пропускает тесты!
 
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
           name: telegram-bot-jar
-
-          path: target/chessbot-0.0.1-SNAPSHOT.jar
-
-          # ИЛИ ДОБАВЬ ЭТО:
-          retention-days: 1
+          path: target/*.jar

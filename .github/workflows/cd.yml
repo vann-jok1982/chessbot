@@ -1,16 +1,19 @@
 name: CD Pipeline
 
 on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:  # Ручной запуск
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    branches: [main]
+    types:
+      - completed
 
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🚀 Deploy to Server
+      - name: Deploy to Server
         uses: appleboy/ssh-action@v0.1.5
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -18,83 +21,37 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            echo "🚀 Деплой Telegram Bot..."
+            echo "✅ Подключение успешно!"
             
-            # 1. Переходим в директорию
+            # ТОЧНО ТАК ЖЕ КАК В ПЕРВОМ ПРИЛОЖЕНИИ:
             cd /opt/telegram-chess-bot
             
-            # 2. Проверяем есть ли JAR
-            if [ ! -f app.jar ]; then
-              echo "⚠️ JAR не найден, создаём тестовый..."
+            # 1. Обновляем код
+            git pull origin main
             
-              # Создаём простой тестовый JAR
-              cat > TestBot.java << 'JAVAEOF'
-              public class TestBot {
-                  public static void main(String[] args) throws Exception {
-                      System.out.println("🤖 Telegram Bot запущен!");
-                      System.out.println("Порт: 8081");
-                      System.out.println("Это тестовая версия");
-                      while(true) {
-                          Thread.sleep(1000);
-                          System.out.print(".");
-                      }
-                  }
-              }
-              JAVAEOF
+            # 2. Собираем JAR (на сервере!)
+            mvn clean package -DskipTests
             
-              javac TestBot.java
-              echo "Main-Class: TestBot" > manifest.txt
-              jar cfm app.jar manifest.txt TestBot.class
-              rm -f TestBot.java TestBot.class manifest.txt
-            
-              echo "✅ Тестовый JAR создан: $(ls -lh app.jar)"
-            else
-              echo "✅ Используем существующий JAR: $(ls -lh app.jar)"
-            fi
-            
-            # 3. Останавливаем старые контейнеры
-            echo "🛑 Останавливаем старый контейнер..."
+            # 3. Останавливаем старый контейнер
             docker stop telegram-chess-bot 2>/dev/null || true
             docker rm telegram-chess-bot 2>/dev/null || true
             
             # 4. Собираем Docker образ
-            echo "🐳 Собираем Docker образ..."
             docker build -t telegram-chess-bot:latest .
             
-            # 5. Проверяем PostgreSQL
-            if ! docker ps --format "{{.Names}}" | grep -q "telegram-bot-postgres"; then
-              echo "🐘 Запускаем PostgreSQL..."
-              docker run -d \
-                --name telegram-bot-postgres \
-                -e POSTGRES_DB=chessbot_db \
-                -e POSTGRES_USER=postgres \
-                -e POSTGRES_PASSWORD=postgres \
-                -p 5433:5432 \
-                --restart unless-stopped \
-                postgres:16-alpine
-              sleep 10
-            fi
-            
-            # 6. Запускаем Telegram Bot
-            echo "🤖 Запускаем Telegram Bot..."
+            # 5. Запускаем Telegram Bot
+            # НАСТРОЙ ПОРТЫ И ПЕРЕМЕННЫЕ КАК У TELEGRAM BOT!
             docker run -d \
               --name telegram-chess-bot \
-              --restart unless-stopped \
-              -p 8081:8081 \
-              -e TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}" \
-              -e TELEGRAM_BOT_USERNAME="${{ secrets.TELEGRAM_BOT_USERNAME }}" \
-              telegram-chess-bot:latest
+              --network host \
+              telegram-chess-bot:latest \
+              --server.port=8081 \
+              --server.address=0.0.0.0 \
+              --telegram.bot.token="${{ secrets.TELEGRAM_BOT_TOKEN }}" \
+              --telegram.bot.username="${{ secrets.TELEGRAM_BOT_USERNAME }}" \
+              --spring.datasource.url=jdbc:postgresql://localhost:5433/chessbot_db \
+              --spring.datasource.username=postgres \
+              --spring.datasource.password=postgres
             
-            # 7. Проверяем
-            echo "⏳ Ожидаем запуск..."
-            sleep 5
-            
-            echo "=== РЕЗУЛЬТАТ ==="
-            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep telegram || echo "❌ Контейнер не найден"
-            
-            echo ""
-            echo "=== ЛОГИ ==="
-            docker logs telegram-chess-bot --tail 10 2>/dev/null || echo "❌ Логи недоступны"
-            
-            echo ""
-            echo "🎉 Деплой завершен! Бот доступен на порту 8081"
+            echo "✅ Telegram Bot деплой завершен!"
+            docker ps | grep telegram-chess-bot
