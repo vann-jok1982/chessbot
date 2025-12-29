@@ -18,7 +18,7 @@ public class ApiClient {
 
     private final RestTemplate restTemplate;
 
-    private final String API_BASE_URL = "http://chess-api:8081/api/games";
+    private final String API_BASE_URL = "http://chessapi:8081/api/games";
 
     /**
      * 🆕 СОЗДАТЬ НОВУЮ ИГРУ
