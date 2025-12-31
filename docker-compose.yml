@@ -1,9 +1,12 @@
 # /opt/telegram-chess-bot/docker-compose.yml
 version: '3.8'
-
+  # На сервере
+  cd /opt/telegram-chess-bot
+  # Создать/обновить docker-compose.yml
+  cat > docker-compose.yml << 'EOF'
 services:
   telegram-chess-bot:
-    image: ${DOCKER_USERNAME:-${secrets.DOCKER_USERNAME}}/telegram-chess-bot:latest
+    image: ${DOCKER_USERNAME:-vannjok}/telegram-chess-bot:latest
     container_name: telegram-chess-bot
     restart: always
     environment:
