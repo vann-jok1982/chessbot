@@ -28,6 +28,9 @@ public class ApiClient {
 
         CreateGameRequest request = new CreateGameRequest(playerId, playerName);
 
+        log.info("🔗 Используется URL: {}", url);  // ← ДОБАВЬТЕ ЭТУ СТРОКУ!
+        log.info("Отправка запроса на создание игры: {}", request);
+
         try {
             log.info("Отправка запроса на создание игры: {}", request);
             ResponseEntity<GameResponse> response = restTemplate.postForEntity(
