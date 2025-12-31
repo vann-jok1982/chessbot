@@ -11,8 +11,8 @@ jobs:
     env:
       # ТОЧНОЕ имя репозитория с Docker Hub!
       DOCKER_USERNAME: vannjok
-      REPO_NAME: telegram-chess-бот  # ← именно так как создали
-      IMAGE_NAME: vannjok/telegram-chess-бот  # ← полное имя
+      REPO_NAME: telegram-chess-bot  # ← именно так как создали
+      IMAGE_NAME: vannjok/telegram-chess-bot  # ← полное имя
 
     steps:
       - name: Checkout repository
