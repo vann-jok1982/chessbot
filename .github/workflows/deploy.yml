@@ -47,31 +47,29 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    # ⬇️ ВРЕМЕННО для теста (замените на реальные значения)
+    # ⬇️ ⬇️ ⬇️ ЗАМЕНИТЕ НА РЕАЛЬНЫЕ ДАННЫЕ! ⬇️ ⬇️ ⬇️
     env:
-      SSH_HOST: "ваш_ip_адрес"  # ← ЗАМЕНИТЕ!
-      SSH_USER: "ваш_пользователь"  # ← ЗАМЕНИТЕ!
+      SSH_HOST: "45.144.67.232"     # например: "123.123.123.123"
+      SSH_USER: "root"   # например: "root" или "ubuntu"
 
     steps:
       - name: Check environment
         run: |
-          echo "=== Current environment ==="
-          echo "SSH_HOST: ${SSH_HOST:-NOT SET}"
-          echo "SSH_USER: ${SSH_USER:-NOT SET}"
+          echo "=== Deployment Configuration ==="
+          echo "Server IP: $SSH_HOST"
+          echo "Username: $SSH_USER"
           echo ""
-          echo "If NOT SET, please add secrets in GitHub:"
-          echo "1. Go to: Settings → Secrets → Actions"
-          echo "2. Add SSH_HOST and SSH_USER"
           
-          # Проверяем
-          if [ -z "$SSH_HOST" ]; then
-            echo "❌ ERROR: SSH_HOST is not set!"
-            echo "Add it as secret or set in env above"
+          if [ "$SSH_HOST" = "ВАШ_IP_СЕРВЕРА" ] || [ -z "$SSH_HOST" ]; then
+            echo "❌ ERROR: You need to set REAL server IP!"
+            echo "1. Find your server IP: ssh to server and run 'hostname -I'"
+            echo "2. Replace 'ВАШ_IP_СЕРВЕРА' in the workflow file"
             exit 1
           fi
           
-          if [ -z "$SSH_USER" ]; then
-            echo "❌ ERROR: SSH_USER is not set!"
+          if [ "$SSH_USER" = "ВАШ_ПОЛЬЗОВАТЕЛЬ" ] || [ -z "$SSH_USER" ]; then
+            echo "❌ ERROR: You need to set REAL username!"
+            echo "Replace 'ВАШ_ПОЛЬЗОВАТЕЛЬ' in the workflow file"
             exit 1
           fi
 
@@ -86,17 +84,19 @@ jobs:
       - name: Deploy to server
         run: |
           ssh "$SSH_USER@$SSH_HOST" "
-            echo '🚀 Deploying to $(hostname)...'
+            echo '🚀 Connecting to server: $(hostname)'
+            echo '📁 Changing to project directory...'
           
-            cd /opt/telegram-chess-bot
+            cd /opt/telegram-chess-bot || { echo '❌ Directory not found!'; exit 1; }
           
-            # Логинимся в Docker Hub
+            echo '🔑 Logging into Docker Hub...'
             echo '${{ secrets.DOCKER_PASSWORD }}' | docker login -u '${{ env.DOCKER_USERNAME }}' --password-stdin
           
-            # Обновляем
-            docker-compose pull || echo '⚠️ Pull failed, continuing...'
+            echo '🐳 Updating Docker containers...'
+            docker-compose pull
             docker-compose up -d
           
-            echo '✅ Деплой завершен!'
-            docker ps | grep telegram-chess-bot || echo '⚠️ Container not found'
+            echo '✅ Deployment completed!'
+            echo '📊 Checking containers:'
+            docker ps --filter 'name=telegram-chess-bot'
           "
