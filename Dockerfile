@@ -5,6 +5,8 @@
 #COPY ${JAR_FILE} app.jar
 #EXPOSE 8080
 #ENTRYPOINT ["java", "-jar", "app.jar"]
+
+
 FROM maven:3.9.11-amazoncorretto-17 AS build
 WORKDIR /opt/app
 COPY mvnw pom.xml ./
