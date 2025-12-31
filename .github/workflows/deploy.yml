@@ -1,6 +1,5 @@
 name: Build and Deploy Chess Bot
 
-# ⬇⬇⬇ on: ДОЛЖЕН БЫТЬ ЗДЕСЬ! ⬇⬇⬇
 on:
   push:
     branches:
@@ -10,19 +9,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # ТОЧНОЕ имя репозитория с Docker Hub!
       DOCKER_USERNAME: vannjok
-      REPO_NAME: telegram-chess-bot  # ← именно так как создали
-      IMAGE_NAME: vannjok/telegram-chess-bot  # ← полное имя
+      IMAGE_NAME: vannjok/telegram-chess-bot
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Debug - show image name
-        run: |
-          echo "Image will be pushed to: $IMAGE_NAME"
-          echo "Check URL: https://hub.docker.com/r/$IMAGE_NAME"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -40,7 +32,7 @@ jobs:
         uses: docker/login-action@v2
         with:
           username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}  # ← ТОКЕН!
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
@@ -55,46 +47,33 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # ⬇️ ВРЕМЕННО для теста (замените на реальные значения)
+    env:
+      SSH_HOST: "ваш_ip_адрес"  # ← ЗАМЕНИТЕ!
+      SSH_USER: "ваш_пользователь"  # ← ЗАМЕНИТЕ!
 
     steps:
-      - name: Verify required secrets
+      - name: Check environment
         run: |
-          echo "=== Checking required secrets ==="
+          echo "=== Current environment ==="
+          echo "SSH_HOST: ${SSH_HOST:-NOT SET}"
+          echo "SSH_USER: ${SSH_USER:-NOT SET}"
+          echo ""
+          echo "If NOT SET, please add secrets in GitHub:"
+          echo "1. Go to: Settings → Secrets → Actions"
+          echo "2. Add SSH_HOST and SSH_USER"
           
-          # Проверяем каждый секрет
-          if [ -z "${{ secrets.SSH_HOST }}" ]; then
-            echo "❌ ERROR: SSH_HOST secret is not set!"
-            echo "Please add SSH_HOST (server IP) to GitHub Secrets"
+          # Проверяем
+          if [ -z "$SSH_HOST" ]; then
+            echo "❌ ERROR: SSH_HOST is not set!"
+            echo "Add it as secret or set in env above"
             exit 1
-          else
-            echo "✅ SSH_HOST: ${{ secrets.SSH_HOST }}"
           fi
           
-          if [ -z "${{ secrets.SSH_USER }}" ]; then
-            echo "❌ ERROR: SSH_USER secret is not set!"
-            echo "Please add SSH_USER (server username) to GitHub Secrets"
+          if [ -z "$SSH_USER" ]; then
+            echo "❌ ERROR: SSH_USER is not set!"
             exit 1
-          else
-            echo "✅ SSH_USER: ${{ secrets.SSH_USER }}"
           fi
-          
-          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
-            echo "❌ ERROR: SSH_PRIVATE_KEY secret is not set!"
-            echo "Please add SSH private key to GitHub Secrets"
-            exit 1
-          else
-            echo "✅ SSH_PRIVATE_KEY: [PRESENT]"
-          fi
-          
-          if [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
-            echo "❌ ERROR: DOCKER_PASSWORD secret is not set!"
-            echo "Please add Docker Hub access token to GitHub Secrets"
-            exit 1
-          else
-            echo "✅ DOCKER_PASSWORD: [PRESENT]"
-          fi
-          
-          echo "✅ All secrets are ready!"
 
       - name: Prepare SSH
         run: |
@@ -102,19 +81,22 @@ jobs:
           chmod 700 ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
       - name: Deploy to server
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          ssh "$SSH_USER@$SSH_HOST" "
+            echo '🚀 Deploying to $(hostname)...'
+          
             cd /opt/telegram-chess-bot
           
             # Логинимся в Docker Hub
             echo '${{ secrets.DOCKER_PASSWORD }}' | docker login -u '${{ env.DOCKER_USERNAME }}' --password-stdin
           
-            # Обновляем контейнер (теперь с правильным именем)
-            docker-compose pull
+            # Обновляем
+            docker-compose pull || echo '⚠️ Pull failed, continuing...'
             docker-compose up -d
           
             echo '✅ Деплой завершен!'
+            docker ps | grep telegram-chess-bot || echo '⚠️ Container not found'
           "
