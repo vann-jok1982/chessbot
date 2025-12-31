@@ -6,7 +6,7 @@ version: '3.8'
   cat > docker-compose.yml << 'EOF'
 services:
   telegram-chess-bot:
-    image: vannjok/telegram-chess-bot:latest  # ← ТОЧНОЕ имя!
+    image: vannjok/telegram-chess-bot:latest  # ← ТОЧНОЕ имя!!
     container_name: telegram-chess-bot
     restart: always
     environment:
