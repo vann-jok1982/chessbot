@@ -1,5 +1,6 @@
 name: Build and Deploy Chess Bot
 
+# ⬇⬇⬇ on: ДОЛЖЕН БЫТЬ ЗДЕСЬ! ⬇⬇⬇
 on:
   push:
     branches:
@@ -56,6 +57,45 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Verify required secrets
+        run: |
+          echo "=== Checking required secrets ==="
+          
+          # Проверяем каждый секрет
+          if [ -z "${{ secrets.SSH_HOST }}" ]; then
+            echo "❌ ERROR: SSH_HOST secret is not set!"
+            echo "Please add SSH_HOST (server IP) to GitHub Secrets"
+            exit 1
+          else
+            echo "✅ SSH_HOST: ${{ secrets.SSH_HOST }}"
+          fi
+          
+          if [ -z "${{ secrets.SSH_USER }}" ]; then
+            echo "❌ ERROR: SSH_USER secret is not set!"
+            echo "Please add SSH_USER (server username) to GitHub Secrets"
+            exit 1
+          else
+            echo "✅ SSH_USER: ${{ secrets.SSH_USER }}"
+          fi
+          
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "❌ ERROR: SSH_PRIVATE_KEY secret is not set!"
+            echo "Please add SSH private key to GitHub Secrets"
+            exit 1
+          else
+            echo "✅ SSH_PRIVATE_KEY: [PRESENT]"
+          fi
+          
+          if [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "❌ ERROR: DOCKER_PASSWORD secret is not set!"
+            echo "Please add Docker Hub access token to GitHub Secrets"
+            exit 1
+          else
+            echo "✅ DOCKER_PASSWORD: [PRESENT]"
+          fi
+          
+          echo "✅ All secrets are ready!"
+
       - name: Prepare SSH
         run: |
           mkdir -p ~/.ssh
