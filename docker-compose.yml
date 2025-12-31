@@ -3,7 +3,7 @@ version: '3.8'
 
 services:
   telegram-chess-bot:
-    image: ${DOCKER_USERNAME:-vannjok}/telegram-chess-bot:latest
+    image: ${DOCKER_USERNAME:-${secrets.DOCKER_USERNAME}}/telegram-chess-bot:latest
     container_name: telegram-chess-bot
     restart: always
     environment:
