@@ -32,7 +32,7 @@ telegram:
 # Настройки Chess API
 chess:
   api:
-    base-url: "http://chessapi:8080/api"  # URL нашего Chess API
+    base-url: "localhost:8080/api"  # URL нашего Chess API
     timeout: 5000  # 5 секунд таймаут
 
 

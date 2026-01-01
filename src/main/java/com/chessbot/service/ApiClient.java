@@ -18,7 +18,7 @@ public class ApiClient {
 
     private final RestTemplate restTemplate;
 
-    private final String API_BASE_URL = "http://host.docker.internal:8080/api/games";
+    private final String API_BASE_URL = "http://localhost:8080/api/games";
 
     /**
      * 🆕 СОЗДАТЬ НОВУЮ ИГРУ
@@ -151,7 +151,7 @@ public class ApiClient {
      * 🧪 ПРОВЕРИТЬ СТАТУС API
      */
     public String testApi() {
-        String url = "http://host.docker.internal:8080/api/games/test";
+        String url = "localhost:8080/api/games/test";
 
         try {
             log.info("Проверка доступности API");
@@ -168,7 +168,7 @@ public class ApiClient {
      * 🤝 ПРЕДЛОЖИТЬ НИЧЬЮ
      */
     public GameResponse offerDraw(String gameId, Long playerId) {
-        String url = "http://host.docker.internal:8080/api/games/" + gameId + "/draw/offer?playerId=" + playerId;
+        String url = "http://localhost:8080/api/games/" + gameId + "/draw/offer?playerId=" + playerId;
 
         try {
             log.info("Предложение ничьи в игре {} от игрока {}", gameId, playerId);
@@ -192,7 +192,7 @@ public class ApiClient {
      * 🤝 ОТВЕТИТЬ НА ПРЕДЛОЖЕНИЕ НИЧЬЕЙ
      */
     public GameResponse respondToDraw(String gameId, Long playerId, boolean accept) {
-        String url = "http://host.docker.internal:8080/api/games/" + gameId +
+        String url = "localhost:8080/api/games/" + gameId +
                 "/draw/respond?playerId=" + playerId + "&accept=" + accept;
 
         try {
