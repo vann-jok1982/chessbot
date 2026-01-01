@@ -12,6 +12,7 @@ services:
     environment:
       API_BASE_URL=http://localhost:8080/api/games  # ← localhost, не host.docker.internal!
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - SERVER_PORT=8082
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/chessbot_db
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
