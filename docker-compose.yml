@@ -10,7 +10,7 @@ services:
     container_name: telegram-chess-bot
     restart: always
     environment:
-      - API_BASE_URL=http://host.docker.internal:8080/api/games
+      API_BASE_URL=http://localhost:8080/api/games  # ← localhost, не host.docker.internal!
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/chessbot_db
       - SPRING_DATASOURCE_USERNAME=postgres
