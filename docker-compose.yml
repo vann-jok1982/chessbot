@@ -6,21 +6,23 @@ version: '3.8'
   cat > docker-compose.yml << 'EOF'
 services:
   telegram-chess-bot:
-    image: vannjok/telegram-chess-bot:latest  # ← ТОЧНОЕ имя!!
+    image: vannjok/telegram-chess-bot:latest
     container_name: telegram-chess-bot
     restart: always
     environment:
-      - API_BASE_URL=http://chessapi:8081/api/games
+      - API_BASE_URL=http://host.docker.internal:8080/api/games
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/chessbot_db
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
     ports:
-      - "8081:8081"
-    depends_on:
-      - postgres
+      - "8082:8082"  # измените на 8082
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # важно для Linux
     networks:
       - chess-network
+    depends_on:
+      - postgres
 
   postgres:
     image: postgres:15
