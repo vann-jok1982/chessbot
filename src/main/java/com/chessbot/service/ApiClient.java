@@ -73,7 +73,7 @@ public class ApiClient {
     }
 
     /**
-     * 🤝 ПРИСОЕДИНИТЬСЯ К ИГРЕ
+     * 🤝 ПРИСОЕДИНИТЬСЯ К ИГРЕ.
      */
     public GameResponse joinGame(String gameId, Long playerId, String playerName) {
         String url = API_BASE_URL + "/" + gameId + "/join";
