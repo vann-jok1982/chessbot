@@ -1,12 +1,13 @@
+# .github/workflows/deploy-bot.yml
 name: Deploy Telegram Bot
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:  # Ручной запуск
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy-bot:
+  deploy-bot:
     runs-on: ubuntu-latest
 
     steps:
@@ -38,16 +39,16 @@ jobs:
             target/*.jar \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/bot.jar
 
-      - name: 🚀 Deploy Bot on server
+      - name: 🚀 Run update script on server
         run: |
-          echo "🚀 Запускаем обновление бота на сервере..."
+          echo "🚀 Запускаем скрипт обновления..."
           ssh -i ~/.ssh/id_rsa \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
             "/opt/update-bot.sh"
 
-      - name: ✅ Verify Bot deployment
+      - name: ✅ Verify deployment
         run: |
-          echo "✅ Проверяем деплой бота..."
+          echo "✅ Проверяем деплой..."
           ssh -i ~/.ssh/id_rsa \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "cd /opt/chess-system && docker compose ps bot && docker logs telegram-chess-bot --tail=3"
+            "cd /opt/chess-system && docker compose ps && echo '---' && docker logs telegram-chess-bot --tail=5"
