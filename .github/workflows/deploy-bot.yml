@@ -1,3 +1,4 @@
+# .github/workflows/deploy.yml
 name: Deploy Telegram Bot
 
 on:
@@ -22,9 +23,8 @@ jobs:
       - name: 🔨 Build Bot
         run: |
           mvn clean package -DskipTests
-          JAR_FILE=$(ls target/*.jar)
-          echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV
-          echo "✅ JAR создан: $JAR_FILE ($(ls -lh $JAR_FILE | awk '{print $5}'))"
+          echo "✅ JAR создан:"
+          ls -lh target/*.jar
 
       - name: 🔐 Setup SSH
         run: |
@@ -35,22 +35,25 @@ jobs:
 
       - name: 📤 Upload Bot JAR
         run: |
-          echo "📤 Загружаем bot.jar на сервер..."
+          echo "📤 Загружаем JAR на сервер..."
           scp -i ~/.ssh/id_rsa \
-            "$JAR_FILE" \
+            target/*.jar \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/chess-system/bot/app.jar
-          echo "✅ JAR загружен в /opt/chess-system/bot/app.jar"
+          echo "✅ JAR загружен"
 
       - name: 🚀 Restart Bot Service
         run: |
           echo "🚀 Перезапускаем сервис telegram-bot..."
           ssh -i ~/.ssh/id_rsa \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "cd /opt/chess-system && docker compose stop telegram-bot && docker compose rm -f telegram-bot && docker compose up -d --build telegram-bot"
+            "cd /opt/chess-system && \
+             docker stop telegram-chess-bot 2>/dev/null || true && \
+             docker rm -f telegram-chess-bot 2>/dev/null || true && \
+             docker compose up -d --build telegram-bot"
 
       - name: ✅ Verify Bot
         run: |
-          echo "✅ Проверяем деплой бота..."
+          echo "✅ Проверяем деплой..."
           ssh -i ~/.ssh/id_rsa \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "sleep 15 && echo '=== Статус контейнеров ===' && docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Image}}' | grep -E '(telegram|bot)' && echo '=== Логи бота (последние 3) ===' && docker logs --tail=3 telegram-chess-bot 2>/dev/null || echo 'Логи пока недоступны'"
+            "sleep 10 && docker ps --filter 'name=telegram-chess-bot' --format 'table {{.Names}}\\t{{.Status}}'"
