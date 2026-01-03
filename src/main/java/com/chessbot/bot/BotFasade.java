@@ -116,7 +116,7 @@ public class BotFasade {
     }
 
     /**
-     * ❌ СОЗДАНИЕ СООБЩЕНИЯ ОБ ОШИБКЕ
+     * ❌ СОЗДАНИЕ СООБЩЕНИЯ ОБ ОШИБКЕ.
      */
     private SendMessage createErrorMessage(Update update) {
         Long chatId = update.hasCallbackQuery() ?
