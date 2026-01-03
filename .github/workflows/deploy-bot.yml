@@ -1,0 +1,53 @@
+name: Deploy Telegram Bot
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Ручной запуск
+
+jobs:
+  build-and-deploy-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Bot code
+        uses: actions/checkout@v4
+
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 🤖 Build Bot
+        run: |
+          mvn clean package -DskipTests
+          ls -lh target/*.jar
+
+      - name: 🔐 Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 📤 Upload Bot JAR to server
+        run: |
+          echo "📦 Загружаем Bot JAR на сервер..."
+          scp -i ~/.ssh/id_rsa \
+            target/*.jar \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/bot.jar
+
+      - name: 🚀 Deploy Bot on server
+        run: |
+          echo "🚀 Запускаем обновление бота на сервере..."
+          ssh -i ~/.ssh/id_rsa \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "/opt/update-bot.sh"
+
+      - name: ✅ Verify Bot deployment
+        run: |
+          echo "✅ Проверяем деплой бота..."
+          ssh -i ~/.ssh/id_rsa \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "cd /opt/chess-system && docker compose ps bot && docker logs telegram-chess-bot --tail=3"
