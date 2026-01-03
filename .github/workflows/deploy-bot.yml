@@ -1,4 +1,3 @@
-# .github/workflows/deploy.yml
 name: Deploy Telegram Bot
 
 on:
@@ -47,7 +46,7 @@ jobs:
           echo "🚀 Перезапускаем сервис telegram-bot..."
           ssh -i ~/.ssh/id_rsa \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "cd /opt/chess-system && docker compose stop telegram-bot && docker compose up -d --build telegram-bot"
+            "cd /opt/chess-system && docker compose stop telegram-bot && docker compose rm -f telegram-bot && docker compose up -d --build telegram-bot"
 
       - name: ✅ Verify Bot
         run: |
