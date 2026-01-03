@@ -148,7 +148,7 @@ public class ApiClient {
     }
 
     /**
-     * 🧪 ПРОВЕРИТЬ СТАТУС API.
+     * 🧪 ПРОВЕРИТЬ СТАТУС API..
      */
     public String testApi() {
         String url =  API_BASE_URL + "/test";  // ← Используем константу!
