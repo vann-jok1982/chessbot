@@ -1,4 +1,4 @@
-# .github/workflows/deploy-bot.yml
+# .github/workflows/deploy.yml
 name: Deploy Telegram Bot
 
 on:
@@ -7,23 +7,25 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-bot:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout Bot code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: ☕ Set up JDK 17
+      - name: ☕ Setup Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: 🤖 Build Bot
+      - name: 🔨 Build Bot
         run: |
           mvn clean package -DskipTests
-          ls -lh target/*.jar
+          JAR_FILE=$(ls target/*.jar)
+          echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV
+          echo "✅ JAR создан: $JAR_FILE ($(ls -lh $JAR_FILE | awk '{print $5}'))"
 
       - name: 🔐 Setup SSH
         run: |
@@ -32,23 +34,24 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: 📤 Upload Bot JAR to server
+      - name: 📤 Upload Bot JAR
         run: |
-          echo "📦 Загружаем Bot JAR на сервер..."
+          echo "📤 Загружаем bot.jar на сервер..."
           scp -i ~/.ssh/id_rsa \
-            target/*.jar \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/bot.jar
+            "$JAR_FILE" \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/chess-system/bot/app.jar
+          echo "✅ JAR загружен в /opt/chess-system/bot/app.jar"
 
-      - name: 🚀 Run update script on server
+      - name: 🚀 Restart Bot Service
         run: |
-          echo "🚀 Запускаем скрипт обновления..."
+          echo "🚀 Перезапускаем сервис telegram-bot..."
           ssh -i ~/.ssh/id_rsa \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "/opt/update-bot.sh"
+            "cd /opt/chess-system && docker compose stop telegram-bot && docker compose up -d --build telegram-bot"
 
-      - name: ✅ Verify deployment
+      - name: ✅ Verify Bot
         run: |
-          echo "✅ Проверяем деплой..."
+          echo "✅ Проверяем деплой бота..."
           ssh -i ~/.ssh/id_rsa \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "cd /opt/chess-system && docker compose ps && echo '---' && docker logs telegram-chess-bot --tail=5"
+            "sleep 15 && echo '=== Статус контейнеров ===' && docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Image}}' | grep -E '(telegram|bot)' && echo '=== Логи бота (последние 3) ===' && docker logs --tail=3 telegram-chess-bot 2>/dev/null || echo 'Логи пока недоступны'"
